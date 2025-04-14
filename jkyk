@@ -1,0 +1,42 @@
+node{
+    def mavenHome = tool name: 'maven3.9.6'
+    /*
+    stage('1Cloning'){
+        git "https://github.com/devopstrain24/maven-web-application"
+    }
+    */
+    stage('2unitTest+Build'){
+        sh "${mavenHome}/bin/mvn package"
+    }
+    stage('3CodeQualityAnalysis'){
+        sh "${mavenHome}/bin/mvn sonar:sonar"
+    }
+    stage('4UploadtoNexus'){
+        sh "${mavenHome}/bin/mvn deploy"
+    }
+    stage('5DeploytoUAT'){
+        deploy adapters: [tomcat9(credentialsId: 'tomcatcredentials', path: '', url: 'http://54.91.26.89:8080/')], contextPath: null, war: 'target/*war'
+    }
+    stage('6ManualApproval'){
+        sh "echo 'please review & apprve' "
+        timeout(time:300, unit:'MINUTES')
+        {
+            input message: 'Application ready for deployment, please review and approve'
+        }
+    }
+    stage('7DeploytoProd'){
+        deploy adapters: [tomcat9(credentialsId: 'tomcatcredentials', path: '', url: 'http://54.91.26.89:8080/')], contextPath: null, war: 'target/*war'
+    }
+    stage('8apm'){
+        sh "echo 'monitoring and observation and alerting' "
+        sh "echo 'application performance Monitoring in progress' "
+    }
+    stage('9Notification'){
+        sh "echo create email notification to resolve any issue that may arise"
+    //use pipeline syntax and email notification plugin to achieve this  
+    emailext body: '''The build and Deployment status for tesla-webapp.
+
+Regards,
+Landmark Technologies''', recipientProviders: [developers(), upstreamDevelopers(), buildUser()], subject: 'job status', to: 'mylandmarktech@gmail.com'
+    }
+}
